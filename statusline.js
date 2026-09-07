@@ -50,21 +50,22 @@ function usedPct(input) {
   return null;
 }
 
-// Стрик и «в консоли» без покраски: наследуют цвет остальной строки.
-// Красим только сигнальные блоки — ночь и лимит.
-const PLAIN = '';
-const NIGHT = '\x1b[36m';
-const WARN = '\x1b[33m';
+// Свой цвет у каждого блока: presence не должен путаться со служебной
+// частью строки. Зелёный у «в консоли» — привычный индикатор онлайна.
+const STREAK = '\x1b[1;95m';
+const NEAR = '\x1b[1;92m';
+const NIGHT = '\x1b[1;96m';
+const WARN = '\x1b[1;93m';
 const OFF = '\x1b[0m';
 
 function render(c, now, { color = false, locale = 'en' } = {}) {
   if (!c || typeof c.streak !== 'number' || !Number.isFinite(c.streak)) return '';
   const w = WORDS[locale] || WORDS.en;
   const paint = (text, code) => (color && code ? code + text + OFF : text);
-  const parts = [paint(w.day(c.streak), PLAIN)];
+  const parts = [paint(w.day(c.streak), STREAK)];
   const fresh = typeof c.ts === 'number' && now - c.ts < TTL_MS;
   if (fresh) {
-    if (c.near > 0) parts.push(paint(w.near(c.near), PLAIN));
+    if (c.near > 0) parts.push(paint(w.near(c.near), NEAR));
     if (c.night > 0) parts.push(paint(w.night(c.night), NIGHT));
     if (c.limited > 0) parts.push(paint(w.limit(c.limited), WARN));
   }

@@ -1,6 +1,6 @@
 {
   "name": "cc-presence",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "One line in your Claude Code statusline that says you are not alone",
   "bin": {
     "cc-presence": "bin.js"
