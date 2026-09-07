@@ -74,6 +74,16 @@ assert.equal(streakFrom(daysFromStats(statsFile), Date.parse('2026-09-07T12:00:0
 assert.throws(() => daysFromStats(path.join(os.tmpdir(), 'нет-такого.json')), 'нет кэша -> fallback на mtime');
 fs.rmSync(statsFile);
 
+// --- пингер: сетевая ошибка не гасит строку мгновенно
+{
+  const prev = { streak: 36, near: 9, night: 4, limited: 6, ts: NOW - 60_000 };
+  const onFail = { ...prev, streak: 37 };                       // как пишет pingd при обрыве
+  assert.equal(render(onFail, NOW, ru), 'день 37 · 9 в консоли · 4 не спят · 6 ждут сброса',
+    'при обрыве цифры сохраняются, стрик обновляется');
+  assert.equal(render({ ...onFail, ts: NOW - 6 * 60_000 }, NOW, ru), 'день 37',
+    'и гаснут по своему TTL, а не сразу');
+}
+
 // --- когорта: симметрия
 assert.ok(isNear(70, 60) && isNear(60, 70), 'близкие видят друг друга с обеих сторон');
 assert.ok(isNear(36, 27) && isNear(27, 36), 'раньше 27 не видел 36 — теперь симметрично');
