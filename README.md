@@ -33,7 +33,18 @@ git-ветки, cwd, версия ОС. Сеть трогает только `pi
 
 ## Установка
 
-`~/.claude/settings.json`:
+```sh
+npx cc-presence
+```
+
+Копирует рантайм в `~/.claude/presence/bin`, прописывает `statusLine` и
+поднимает пингер. Если `statusLine` уже занят твоим скриптом — не трогает его,
+а печатает две строки для вставки в конец. Снести целиком:
+`npx cc-presence uninstall` (убирает всё, включая `~/.claude/presence`).
+
+Ещё команды: `start`, `stop`, `status`.
+
+Вручную — `~/.claude/settings.json`:
 
 ```json
 {

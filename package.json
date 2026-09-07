@@ -1,12 +1,14 @@
 {
-  "name": "presence",
+  "name": "cc-presence",
   "version": "0.1.0",
-  "private": true,
-  "description": "Одна строка в статуслайне Claude Code: ты не один",
+  "description": "Одна строка в статуслайне Claude Code: сколько людей с похожим стриком сейчас в консоли",
+  "bin": { "cc-presence": "bin.js" },
+  "files": ["bin.js", "statusline.js", "pingd.js", "server.js", "README.md"],
   "engines": { "node": ">=20" },
+  "license": "MIT",
+  "keywords": ["claude-code", "statusline", "presence", "streak"],
   "scripts": {
     "test": "node test.js",
-    "server": "node server.js",
-    "pingd": "node pingd.js"
+    "server": "node server.js"
   }
 }
