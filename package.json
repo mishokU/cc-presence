@@ -1,14 +1,38 @@
 {
   "name": "cc-presence",
   "version": "0.1.0",
-  "description": "Одна строка в статуслайне Claude Code: сколько людей с похожим стриком сейчас в консоли",
-  "bin": { "cc-presence": "bin.js" },
-  "files": ["bin.js", "statusline.js", "pingd.js", "server.js", "README.md"],
-  "engines": { "node": ">=20" },
+  "description": "One line in your Claude Code statusline that says you are not alone",
+  "bin": {
+    "cc-presence": "bin.js"
+  },
+  "files": [
+    "bin.js",
+    "statusline.js",
+    "pingd.js",
+    "server.js",
+    "dump.js",
+    "README.md",
+    "README.ru.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "license": "MIT",
-  "keywords": ["claude-code", "statusline", "presence", "streak"],
+  "keywords": [
+    "claude-code",
+    "statusline",
+    "presence",
+    "streak"
+  ],
   "scripts": {
     "test": "node test.js",
     "server": "node server.js"
-  }
+  },
+  "author": "Mikhail Usov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mishokU/cc-presence.git"
+  },
+  "homepage": "https://github.com/mishokU/cc-presence#readme"
 }

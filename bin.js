@@ -11,7 +11,7 @@ const DIR = path.join(HOME, '.claude', 'presence');
 const BIN = path.join(DIR, 'bin');
 const PID = path.join(DIR, 'pingd.pid');
 const SETTINGS = path.join(HOME, '.claude', 'settings.json');
-const RUNTIME = ['statusline.js', 'pingd.js'];
+const RUNTIME = ['statusline.js', 'pingd.js', 'dump.js'];
 const CMD = `node ${path.join(BIN, 'statusline.js')}`;
 
 // npx распаковывает пакет во временный кэш, поэтому рантайм копируем к себе.

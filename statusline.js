@@ -11,12 +11,15 @@ const COHORT = path.join(DIR, 'cohort.json');
 const TTL_MS = 5 * 60 * 1000;
 const LIMIT_PCT = 95;
 
+// 1, 21, 31... требуют единственного числа, 11 — нет.
+const one = (n) => n % 10 === 1 && n % 100 !== 11;
+
 const WORDS = {
   ru: {
     day: (n) => `день ${n}`,
     near: (n) => `${n} в консоли`,
-    night: (n) => `${n} не спят`,
-    limit: (n) => `${n} ждут сброса`,
+    night: (n) => `${n} не ${one(n) ? 'спит' : 'спят'}`,
+    limit: (n) => `${n} ${one(n) ? 'ждёт' : 'ждут'} сброса`,
   },
   en: {
     day: (n) => `day ${n}`,

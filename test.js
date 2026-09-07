@@ -35,6 +35,12 @@ assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW }, NOW,
   'день 70 · 9 в консоли · 4 не спят · 6 ждут сброса');
 assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW }, NOW),
   'day 70 · 9 online · 4 still up · 6 waiting it out', 'английский по умолчанию');
+assert.equal(render({ streak: 70, near: 1, night: 1, limited: 1, ts: NOW }, NOW, ru),
+  'день 70 · 1 в консоли · 1 не спит · 1 ждёт сброса', 'единственное число');
+assert.equal(render({ streak: 70, near: 21, night: 21, limited: 21, ts: NOW }, NOW, ru),
+  'день 70 · 21 в консоли · 21 не спит · 21 ждёт сброса', '21 тоже единственное');
+assert.equal(render({ streak: 70, near: 11, night: 11, limited: 11, ts: NOW }, NOW, ru),
+  'день 70 · 11 в консоли · 11 не спят · 11 ждут сброса', 'а 11 — множественное');
 assert.equal(render({ streak: 70, near: 9, night: 0, limited: 6, ts: NOW }, NOW, ru),
   'день 70 · 9 в консоли · 6 ждут сброса', 'нулевая ночь выпадает из середины');
 assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW - 6 * 60_000 }, NOW, ru), 'день 70', 'протух -> только стрик');

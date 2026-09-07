@@ -1,89 +1,94 @@
 # presence
 
-Одна строка в статуслайне Claude Code: показывает, что ты не один.
+One line in your Claude Code statusline that says you are not alone.
 
 ```
-день 70 · 6 ждут сброса
+day 70 · 9 online · 4 still up · 6 waiting it out
 ```
 
-«Твои» — люди с сопоставимым стриком, которые прямо сейчас в консоли.
-Не чат, не лидерборд, не трекер расхода токенов.
+"Yours" means people with a comparable streak who are in the console right now.
+Not a chat, not a leaderboard, not another token-spend tracker.
 
-## Что уходит с машины
+[По-русски](README.ru.md)
 
-Ровно три поля и ничего больше:
+## What leaves your machine
+
+Exactly four fields, nothing else:
 
 ```json
-{ "id": "<hex, 16 случайных байт>", "streak": 70, "state": "work" | "limit", "night": true }
+{ "id": "<hex, 16 random bytes>", "streak": 70, "state": "work" | "limit", "night": true }
 ```
 
-- `id` — случайный, генерируется один раз в `~/.claude/presence/id` (права 0600),
-  не выводится ни из чего идентифицирующего;
-- `streak` — число подряд идущих дней с сессиями (по `~/.claude/stats-cache.json`,
-  который Claude Code ведёт сам; фоллбэк — mtime файлов `*.jsonl`);
-- `state` — `limit`, если пятичасовое окно израсходовано на 95% и больше;
-- `night` — один бит: у человека сейчас 23:00-06:00. Не часовой пояс, не время,
-  не смещение — только да/нет, посчитанное на его машине.
+- `id` — random, generated once into `~/.claude/presence/id` (mode 0600),
+  derived from nothing identifying;
+- `streak` — consecutive days with at least one session;
+- `state` — `limit` when the five-hour window is 95% used or more;
+- `night` — a single bit: it is 23:00–06:00 where that person is. Not a timezone,
+  not a clock, not an offset — just yes or no, computed on their machine.
 
-Не уходят: промпты, пути, имена файлов и репозиториев, названия моделей,
-git-ветки, cwd, версия ОС. Сеть трогает только `pingd.js`; `statusline.js`
-не делает ни одного сетевого вызова.
+Never sent: prompts, paths, file or repository names, model names, git branches,
+cwd, OS version. Only `pingd.js` touches the network; `statusline.js` makes no
+network calls at all, under any condition.
 
-По умолчанию пингер ходит на `https://presence.mybrocade.ru`; свой сервер —
-переменной `PRESENCE_SERVER`. Сервер держит `Map` в памяти с TTL 120 секунд. Ни базы, ни диска, ни аккаунтов.
+The server keeps a `Map` in memory with a 120-second TTL. No database, no disk,
+no accounts. A restart means everyone reconnects within 45 seconds — presence is
+ephemeral by nature.
 
-## Установка
+## Install
 
 ```sh
 npx cc-presence
 ```
 
-Копирует рантайм в `~/.claude/presence/bin`, прописывает `statusLine` и
-поднимает пингер. Если `statusLine` уже занят твоим скриптом — не трогает его,
-а печатает две строки для вставки в конец. Снести целиком:
-`npx cc-presence uninstall` (убирает всё, включая `~/.claude/presence`).
+It copies the runtime into `~/.claude/presence/bin`, wires up `statusLine` and
+starts the pinger. If `statusLine` is already taken by your own script, it leaves
+it alone and prints two lines to append. Remove everything:
+`npx cc-presence uninstall`.
 
-Ещё команды: `start`, `stop`, `status`.
+Other commands: `start`, `stop`, `status`.
 
-Язык строки — английский; русский включается `PRESENCE_LANG=ru` или системной
-локалью `ru_*`.
+The pinger talks to `https://presence.mybrocade.ru` by default; point it at your
+own server with `PRESENCE_SERVER`. Run your own with `node server.js` (`PORT`,
+default 8787).
 
-Вручную — `~/.claude/settings.json`:
+The line is English by default; `PRESENCE_LANG=ru` or a `ru_*` locale switches it
+to Russian.
 
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "node /Users/usov/IdeaProjects/presence/statusline.js"
-  }
-}
+## What you see
+
+```
+day 70                                             server down / nobody around
+day 70 · 9 online                                  a cohort exists
+day 70 · 9 online · 4 still up · 6 waiting it out  all three signals at once
 ```
 
-Фоновый пингер (без него будет только стрик):
+A zero block is never printed — it disappears entirely, middle ones included.
+Zero is not a neutral number, it is the message "you are alone", which is the
+one thing this tool exists to prevent.
 
-```sh
-PRESENCE_SERVER=http://127.0.0.1:8787 nohup node pingd.js >/dev/null 2>&1 &
-```
+The streak is computed locally and works with zero other users and no server.
+A `cohort.json` older than 5 minutes is stale and the social part goes quiet.
 
-Сервер: `node server.js` (порт `PORT`, по умолчанию 8787).
-
-## Файлы
+## Files
 
 | | |
 |---|---|
-| `statusline.js` | рендер строки: только диск, никогда не падает, ~28 мс |
-| `pingd.js` | раз в 45 с считает стрик и ходит на сервер |
-| `server.js` | `POST /ping`, когорта из памяти |
-| `dump.js` | отладка: повесить на statusLine на один рендер, сырой stdin ляжет в `~/.claude/presence/stdin-dump.json` |
-| `test.js` | `node test.js` — приёмка из ТЗ |
+| `statusline.js` | renders the line: disk only, never throws, ~26 ms |
+| `pingd.js` | every 45 s: counts the streak, talks to the server |
+| `server.js` | `POST /ping`, cohorts from memory |
+| `bin.js` | the `npx cc-presence` CLI |
+| `dump.js` | debugging: point statusLine at it for one render, raw stdin lands in `~/.claude/presence/stdin-dump.json` |
+| `test.js` | `node test.js` — the acceptance list |
 
-## Что показывается
+Node 20+, zero runtime dependencies. Not asceticism: the statusline runs on every
+render, and one `require` of a third-party package costs more than all the useful
+work in that process.
 
-```
-день 70                                          сервер недоступен / никого рядом
-день 70 · 9 в консоли                            есть когорта
-день 70 · 9 в консоли · 4 не спят · 6 ждут сброса   все три сигнала сразу
-```
+## Cohort
 
-Нулевой блок не выводится никогда — исчезает целиком, включая середину. Стрик считается локально
-и работает без сервера. `cohort.json` старше 5 минут — социальный блок молчит.
+A ±25% band around your streak, never narrower than ±3 days. At a streak of 70
+that is 52–88; at 5 it is 2–8. You never count yourself.
+
+## License
+
+MIT
