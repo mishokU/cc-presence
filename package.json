@@ -1,0 +1,12 @@
+{
+  "name": "presence",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Одна строка в статуслайне Claude Code: ты не один",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node test.js",
+    "server": "node server.js",
+    "pingd": "node pingd.js"
+  }
+}
