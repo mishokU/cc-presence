@@ -20,21 +20,24 @@ function range(streak) {
 function cohort(id, streak, now, peers = live) {
   const { lo, hi } = range(streak);
   let near = 0;
+  let night = 0;
   let limited = 0;
   for (const [pid, p] of peers) {
     if (pid === id || p.exp <= now) continue;
     if (p.streak < lo || p.streak > hi) continue;
     near++;
+    if (p.night) night++;
     if (p.state === 'limit') limited++;
   }
-  return { near, limited };
+  return { near, night, limited };
 }
 
 function valid(b) {
   return b
     && typeof b.id === 'string' && /^[0-9a-f]{32}$/.test(b.id)
     && Number.isInteger(b.streak) && b.streak >= 0 && b.streak < 100_000
-    && (b.state === 'work' || b.state === 'limit');
+    && (b.state === 'work' || b.state === 'limit')
+    && (b.night === undefined || typeof b.night === 'boolean');
 }
 
 const server = http.createServer((req, res) => {
@@ -58,7 +61,7 @@ const server = http.createServer((req, res) => {
     }
     const now = Date.now();
     for (const [pid, p] of live) if (p.exp <= now) live.delete(pid);
-    live.set(body.id, { streak: body.streak, state: body.state, exp: now + TTL_MS });
+    live.set(body.id, { streak: body.streak, state: body.state, night: !!body.night, exp: now + TTL_MS });
     res.writeHead(200, { 'content-type': 'application/json' })
       .end(JSON.stringify(cohort(body.id, body.streak, now)));
   });

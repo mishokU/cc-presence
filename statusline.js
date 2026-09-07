@@ -27,19 +27,21 @@ function usedPct(input) {
 }
 
 const DIM = '\x1b[2m';
+const NIGHT = '\x1b[36m';
 const WARN = '\x1b[33m';
 const OFF = '\x1b[0m';
 
 function render(c, now, color = false) {
   if (!c || typeof c.streak !== 'number' || !Number.isFinite(c.streak)) return '';
   const paint = (text, code) => (color ? code + text + OFF : text);
-  let s = paint(`день ${c.streak}`, DIM);
+  const parts = [paint(`день ${c.streak}`, DIM)];
   const fresh = typeof c.ts === 'number' && now - c.ts < TTL_MS;
   if (fresh) {
-    if (c.limited > 0) s += paint(` · ${c.limited} из твоих на лимите`, WARN);
-    else if (c.near > 0) s += paint(` · рядом ${c.near}`, DIM);
+    if (c.near > 0) parts.push(paint(`рядом ${c.near}`, DIM));
+    if (c.night > 0) parts.push(paint(`в ночи ${c.night}`, NIGHT));
+    if (c.limited > 0) parts.push(paint(`на лимите ${c.limited}`, WARN));
   }
-  return s;
+  return parts.join(' · ');
 }
 
 function main() {

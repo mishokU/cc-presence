@@ -28,15 +28,18 @@ assert.equal(usedPct({}), null, 'нет rate_limits -> null, дальше work')
 assert.equal(usedPct(null), null);
 
 // --- рендер
-assert.equal(render({ streak: 70, near: 0, limited: 0, ts: NOW }, NOW), 'день 70', 'near:0 -> блока нет');
-assert.equal(render({ streak: 70, near: 9, limited: 0, ts: NOW }, NOW), 'день 70 · рядом 9');
-assert.equal(render({ streak: 70, near: 9, limited: 6, ts: NOW }, NOW), 'день 70 · 6 из твоих на лимите');
-assert.equal(render({ streak: 70, near: 9, limited: 6, ts: NOW - 6 * 60_000 }, NOW), 'день 70', 'протух -> только стрик');
+assert.equal(render({ streak: 70, near: 0, night: 0, limited: 0, ts: NOW }, NOW), 'день 70', 'нули -> блоков нет');
+assert.equal(render({ streak: 70, near: 9, night: 0, limited: 0, ts: NOW }, NOW), 'день 70 · рядом 9');
+assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW }, NOW),
+  'день 70 · рядом 9 · в ночи 4 · на лимите 6');
+assert.equal(render({ streak: 70, near: 9, night: 0, limited: 6, ts: NOW }, NOW),
+  'день 70 · рядом 9 · на лимите 6', 'нулевая ночь выпадает из середины');
+assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW - 6 * 60_000 }, NOW), 'день 70', 'протух -> только стрик');
 assert.equal(render(null, NOW), '', 'нет cohort.json -> пусто');
 assert.equal(render({ near: 9 }, NOW), '');
 
-assert.equal(render({ streak: 70, near: 9, limited: 6, ts: NOW }, NOW, true),
-  '\x1b[2mдень 70\x1b[0m\x1b[33m · 6 из твоих на лимите\x1b[0m', 'цвет только в main');
+assert.equal(render({ streak: 70, near: 0, night: 0, limited: 6, ts: NOW }, NOW, true),
+  '\x1b[2mдень 70\x1b[0m · \x1b[33mна лимите 6\x1b[0m', 'цвет только в main');
 
 // --- стрик
 assert.equal(streakFrom(days(NOW, NOW - DAY, NOW - 2 * DAY), NOW), 3);
@@ -61,20 +64,22 @@ fs.rmSync(statsFile);
 assert.deepEqual(range(70), { lo: 52, hi: 88 });
 assert.deepEqual(range(5), { lo: 2, hi: 8 });
 const peers = new Map([
-  ['a', { streak: 60, state: 'limit', exp: NOW + 1 }],
-  ['b', { streak: 88, state: 'work', exp: NOW + 1 }],
-  ['c', { streak: 5, state: 'limit', exp: NOW + 1 }],
-  ['d', { streak: 70, state: 'limit', exp: NOW - 1 }],
-  ['me', { streak: 70, state: 'work', exp: NOW + 1 }],
+  ['a', { streak: 60, state: 'limit', night: true, exp: NOW + 1 }],
+  ['b', { streak: 88, state: 'work', night: true, exp: NOW + 1 }],
+  ['c', { streak: 5, state: 'limit', night: false, exp: NOW + 1 }],
+  ['d', { streak: 70, state: 'limit', night: true, exp: NOW - 1 }],
+  ['me', { streak: 70, state: 'work', night: false, exp: NOW + 1 }],
 ]);
-assert.deepEqual(cohort('me', 70, NOW, peers), { near: 2, limited: 1 }, '70 не видит 5, себя и протухших');
-assert.deepEqual(cohort('c', 5, NOW, peers), { near: 0, limited: 0 }, '5 не видит 70');
+assert.deepEqual(cohort('me', 70, NOW, peers), { near: 2, night: 2, limited: 1 }, '70 не видит 5, себя и протухших');
+assert.deepEqual(cohort('c', 5, NOW, peers), { near: 0, night: 0, limited: 0 }, '5 не видит 70');
 
 // --- валидация тела
 assert.ok(valid({ id: 'a'.repeat(32), streak: 70, state: 'work' }));
 assert.ok(!valid({ id: 'nope', streak: 70, state: 'work' }));
 assert.ok(!valid({ id: 'a'.repeat(32), streak: -1, state: 'work' }));
 assert.ok(!valid({ id: 'a'.repeat(32), streak: 70, state: 'idle' }));
+assert.ok(valid({ id: 'a'.repeat(32), streak: 70, state: 'work', night: true }));
+assert.ok(!valid({ id: 'a'.repeat(32), streak: 70, state: 'work', night: 'да' }), 'night только boolean');
 assert.ok(!valid(undefined));
 
 // --- statusline как процесс: битый stdin, чужой HOME
@@ -114,10 +119,10 @@ const median = Math.round(t[10]);
 
   const me = 'b'.repeat(32);
   const peer = 'c'.repeat(32);
-  await post(JSON.stringify({ id: peer, streak: 72, state: 'limit' }));
-  const res = await post(JSON.stringify({ id: me, streak: 70, state: 'work' }));
+  await post(JSON.stringify({ id: peer, streak: 72, state: 'limit', night: true }));
+  const res = await post(JSON.stringify({ id: me, streak: 70, state: 'work', night: false }));
   assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { near: 1, limited: 1 });
+  assert.deepEqual(await res.json(), { near: 1, night: 1, limited: 1 });
 
   await assert.rejects(post('x'.repeat(2048)), 'body > 1 КБ -> разрыв');
 

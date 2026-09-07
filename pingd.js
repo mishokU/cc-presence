@@ -90,6 +90,12 @@ function getId() {
   return id;
 }
 
+// Один бит, а не часовой пояс: 23:00-06:00 по локальным часам.
+function isNight(now = Date.now()) {
+  const h = new Date(now).getHours();
+  return h >= 23 || h < 6;
+}
+
 function readState() {
   try {
     const s = JSON.parse(fs.readFileSync(STATE, 'utf8'));
@@ -107,8 +113,9 @@ function writeCohort(data) {
 
 async function tick(id) {
   const streak = streakFrom(collectDays());
-  const body = { id, streak, state: readState() };
+  const body = { id, streak, state: readState(), night: isNight() };
   let near = 0;
+  let night = 0;
   let limited = 0;
   try {
     const res = await fetch(`${SERVER}/ping`, {
@@ -120,11 +127,12 @@ async function tick(id) {
     if (res.ok) {
       const j = await res.json();
       near = Number(j.near) || 0;
+      night = Number(j.night) || 0;
       limited = Number(j.limited) || 0;
     }
   } catch {}
   try {
-    writeCohort({ streak, near, limited, ts: Date.now() });
+    writeCohort({ streak, near, night, limited, ts: Date.now() });
   } catch {}
 }
 
@@ -136,4 +144,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { streakFrom, dayKey, collectDays, daysFromStats, mtimeDays };
+module.exports = { streakFrom, dayKey, collectDays, daysFromStats, mtimeDays, isNight };
