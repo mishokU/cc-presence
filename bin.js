@@ -16,6 +16,7 @@ const CMD = `node ${path.join(BIN, 'statusline.js')}`;
 const LABEL = 'com.cc-presence.pingd';
 const AGENT = path.join(HOME, 'Library', 'LaunchAgents', `${LABEL}.plist`);
 const UNIT = path.join(HOME, '.config', 'systemd', 'user', 'cc-presence.service');
+const VBS = path.join(BIN, 'pingd-hidden.vbs');
 
 function quiet(cmd, args) {
   try {
@@ -64,6 +65,15 @@ ${env}</dict>
 `,
     };
   }
+  if (process.platform === 'win32') {
+    // Задача планировщика запускает не node напрямую, а wscript:
+    // иначе при каждом входе в систему мигало бы окно консоли.
+    return {
+      kind: 'schtasks',
+      file: VBS,
+      body: `CreateObject("WScript.Shell").Run ${node} ${pingd}, 0, False\r\n`,
+    };
+  }
   if (process.platform === 'linux') {
     return {
       kind: 'systemd',
@@ -93,6 +103,12 @@ function installService() {
     quiet('launchctl', ['unload', svc.file]);
     return quiet('launchctl', ['load', '-w', svc.file]) ? svc.kind : null;
   }
+  if (svc.kind === 'schtasks') {
+    const ok = quiet('schtasks', ['/create', '/tn', 'cc-presence', '/tr',
+      `wscript.exe "${svc.file}"`, '/sc', 'onlogon', '/f']);
+    if (ok) quiet('schtasks', ['/run', '/tn', 'cc-presence']);
+    return ok ? svc.kind : null;
+  }
   quiet('systemctl', ['--user', 'daemon-reload']);
   return quiet('systemctl', ['--user', 'enable', '--now', 'cc-presence']) ? svc.kind : null;
 }
@@ -101,6 +117,7 @@ function removeService() {
   const svc = serviceFile();
   if (!svc || !fs.existsSync(svc.file)) return false;
   if (svc.kind === 'launchd') quiet('launchctl', ['unload', '-w', svc.file]);
+  else if (svc.kind === 'schtasks') quiet('schtasks', ['/delete', '/tn', 'cc-presence', '/f']);
   else {
     quiet('systemctl', ['--user', 'disable', '--now', 'cc-presence']);
     quiet('systemctl', ['--user', 'daemon-reload']);

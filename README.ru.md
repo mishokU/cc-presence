@@ -45,7 +45,8 @@ npx cc-presence
 а печатает две строки для вставки в конец. Снести целиком:
 `npx cc-presence uninstall` (убирает всё, включая `~/.claude/presence`).
 
-Пингер ставится в автозапуск (launchd на macOS, systemd user unit на Linux) —
+Пингер ставится в автозапуск (launchd на macOS, systemd user unit на Linux,
+задача планировщика на Windows) —
 переживает перезагрузку. `npx cc-presence stop` снимает автозапуск, `uninstall`
 убирает вместе со всем остальным.
 

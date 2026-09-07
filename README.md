@@ -46,7 +46,7 @@ it alone and prints two lines to append. Remove everything:
 `npx cc-presence uninstall`.
 
 The pinger is registered for autostart (a launchd agent on macOS, a systemd user
-unit on Linux), so it survives a reboot. `npx cc-presence stop` unregisters it;
+unit on Linux, a scheduled task on Windows), so it survives a reboot. `npx cc-presence stop` unregisters it;
 `uninstall` removes it along with everything else.
 
 It also stays quiet unless a session is actually rendering the line: if no
