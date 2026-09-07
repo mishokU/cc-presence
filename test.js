@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { usedPct, render } = require('./statusline.js');
+const { usedPct, render, lang } = require('./statusline.js');
 const { streakFrom, daysFromStats } = require('./pingd.js');
 const { range, cohort, valid, server, live } = require('./server.js');
 const NOW = Date.parse('2026-09-07T12:00:00Z');
@@ -28,17 +28,25 @@ assert.equal(usedPct({}), null, 'нет rate_limits -> null, дальше work')
 assert.equal(usedPct(null), null);
 
 // --- рендер
-assert.equal(render({ streak: 70, near: 0, night: 0, limited: 0, ts: NOW }, NOW), 'день 70', 'нули -> блоков нет');
-assert.equal(render({ streak: 70, near: 9, night: 0, limited: 0, ts: NOW }, NOW), 'день 70 · рядом 9');
-assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW }, NOW),
+const ru = { locale: 'ru' };
+assert.equal(render({ streak: 70, near: 0, night: 0, limited: 0, ts: NOW }, NOW, ru), 'день 70', 'нули -> блоков нет');
+assert.equal(render({ streak: 70, near: 9, night: 0, limited: 0, ts: NOW }, NOW, ru), 'день 70 · рядом 9');
+assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW }, NOW, ru),
   'день 70 · рядом 9 · в ночи 4 · на лимите 6');
-assert.equal(render({ streak: 70, near: 9, night: 0, limited: 6, ts: NOW }, NOW),
+assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW }, NOW),
+  'day 70 · nearby 9 · up late 4 · capped 6', 'английский по умолчанию');
+assert.equal(render({ streak: 70, near: 9, night: 0, limited: 6, ts: NOW }, NOW, ru),
   'день 70 · рядом 9 · на лимите 6', 'нулевая ночь выпадает из середины');
-assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW - 6 * 60_000 }, NOW), 'день 70', 'протух -> только стрик');
+assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW - 6 * 60_000 }, NOW, ru), 'день 70', 'протух -> только стрик');
 assert.equal(render(null, NOW), '', 'нет cohort.json -> пусто');
 assert.equal(render({ near: 9 }, NOW), '');
 
-assert.equal(render({ streak: 70, near: 0, night: 0, limited: 6, ts: NOW }, NOW, true),
+assert.equal(lang({ LANG: 'ru_RU.UTF-8' }), 'ru');
+assert.equal(lang({ LANG: 'en_US.UTF-8' }), 'en');
+assert.equal(lang({}), 'en', 'без локали -> английский');
+assert.equal(lang({ PRESENCE_LANG: 'ru', LANG: 'en_US.UTF-8' }), 'ru', 'явная переменная сильнее');
+
+assert.equal(render({ streak: 70, near: 0, night: 0, limited: 6, ts: NOW }, NOW, { color: true, locale: 'ru' }),
   '\x1b[2mдень 70\x1b[0m · \x1b[33mна лимите 6\x1b[0m', 'цвет только в main');
 
 // --- стрик
@@ -92,9 +100,9 @@ assert.equal(run('{}'), '', 'нет cohort.json -> пусто, exit 0');
 const pdir = path.join(home, '.claude', 'presence');
 fs.mkdirSync(pdir, { recursive: true });
 fs.writeFileSync(path.join(pdir, 'cohort.json'), JSON.stringify({ streak: 70, near: 0, limited: 0, ts: Date.now() }));
-assert.match(run('{"rate_limits":{"five_hour":{"used_percentage":99}}}'), /день 70/);
+assert.match(run('{"rate_limits":{"five_hour":{"used_percentage":99}}}'), /(день|day) 70/);
 assert.equal(JSON.parse(fs.readFileSync(path.join(pdir, 'state.json'), 'utf8')).state, 'limit');
-assert.match(run('{"rate_limits":{"five_hour":{"used_percentage":10}}}'), /день 70/);
+assert.match(run('{"rate_limits":{"five_hour":{"used_percentage":10}}}'), /(день|day) 70/);
 assert.equal(JSON.parse(fs.readFileSync(path.join(pdir, 'state.json'), 'utf8')).state, 'work');
 
 const t = [];

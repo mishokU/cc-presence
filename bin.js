@@ -77,7 +77,7 @@ function install() {
   start();
   console.log(`\nС машины уходит ровно это: { id: <случайные 16 байт>, streak, state, night }.
 Ни промптов, ни путей, ни имён репозиториев, ни моделей, ни времени — только эти четыре поля.
-Сервер: ${process.env.PRESENCE_SERVER || 'http://127.0.0.1:8787'} (свой — переменной PRESENCE_SERVER).
+Сервер: ${process.env.PRESENCE_SERVER || 'https://presence.mybrocade.ru'} (свой — переменной PRESENCE_SERVER).
 Снести целиком: npx cc-presence uninstall\n`);
 }
 
