@@ -17,6 +17,7 @@ const COHORT = path.join(DIR, 'cohort.json');
 const SERVER = process.env.PRESENCE_SERVER || 'https://presence.mybrocade.ru';
 const TICK_MS = 45_000;
 const STATE_TTL_MS = 120_000;
+const IDLE_MS = 10 * 60_000;
 const DAY_MS = 86_400_000;
 
 const dayKey = (t) => {
@@ -96,6 +97,16 @@ function isNight(now = Date.now()) {
   return h >= 23 || h < 6;
 }
 
+// Живая сессия = статуслайн рендерился недавно. Иначе не пингуем вообще:
+// иначе «в консоли» означало бы всего лишь «компьютер не выключен».
+function sessionAlive(now = Date.now()) {
+  try {
+    return now - JSON.parse(fs.readFileSync(STATE, 'utf8')).ts < IDLE_MS;
+  } catch {
+    return false;
+  }
+}
+
 function readState() {
   try {
     const s = JSON.parse(fs.readFileSync(STATE, 'utf8'));
@@ -113,6 +124,13 @@ function writeCohort(data) {
 
 async function tick(id) {
   const streak = streakFrom(collectDays());
+  if (!sessionAlive()) {
+    const prev = readCohort();
+    try {
+      writeCohort(prev ? { ...prev, streak } : { streak, near: 0, night: 0, limited: 0, ts: 0 });
+    } catch {}
+    return;
+  }
   const body = { id, streak, state: readState(), night: isNight() };
   let near = 0;
   let night = 0;
@@ -144,4 +162,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { streakFrom, dayKey, collectDays, daysFromStats, mtimeDays, isNight };
+module.exports = { streakFrom, dayKey, collectDays, daysFromStats, mtimeDays, isNight, sessionAlive };

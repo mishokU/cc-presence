@@ -45,6 +45,14 @@ starts the pinger. If `statusLine` is already taken by your own script, it leave
 it alone and prints two lines to append. Remove everything:
 `npx cc-presence uninstall`.
 
+The pinger is registered for autostart (a launchd agent on macOS, a systemd user
+unit on Linux), so it survives a reboot. `npx cc-presence stop` unregisters it;
+`uninstall` removes it along with everything else.
+
+It also stays quiet unless a session is actually rendering the line: if no
+statusline render happened for 10 minutes, it stops pinging, so "online" means
+someone is in the console, not that their machine is powered on.
+
 Other commands: `start`, `stop`, `status`.
 
 The pinger talks to `https://presence.mybrocade.ru` by default; point it at your

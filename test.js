@@ -8,7 +8,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const { usedPct, render, lang } = require('./statusline.js');
-const { streakFrom, daysFromStats } = require('./pingd.js');
+const { streakFrom, daysFromStats, sessionAlive } = require('./pingd.js');
 const { isNear, cohort, valid, server, live } = require('./server.js');
 const NOW = Date.parse('2026-09-07T12:00:00Z');
 const DAY = 86_400_000;
@@ -73,6 +73,9 @@ assert.deepEqual([...daysFromStats(statsFile)].sort(), ['2026-09-05', '2026-09-0
 assert.equal(streakFrom(daysFromStats(statsFile), Date.parse('2026-09-07T12:00:00Z')), 2, 'поблажка на сегодня');
 assert.throws(() => daysFromStats(path.join(os.tmpdir(), 'нет-такого.json')), 'нет кэша -> fallback на mtime');
 fs.rmSync(statsFile);
+
+// --- пингер молчит, пока нет живой сессии
+assert.equal(sessionAlive(), true, 'эта сессия рендерит строку прямо сейчас');
 
 // --- пингер: сетевая ошибка не гасит строку мгновенно
 {

@@ -13,6 +13,101 @@ const PID = path.join(DIR, 'pingd.pid');
 const SETTINGS = path.join(HOME, '.claude', 'settings.json');
 const RUNTIME = ['statusline.js', 'pingd.js', 'dump.js'];
 const CMD = `node ${path.join(BIN, 'statusline.js')}`;
+const LABEL = 'com.cc-presence.pingd';
+const AGENT = path.join(HOME, 'Library', 'LaunchAgents', `${LABEL}.plist`);
+const UNIT = path.join(HOME, '.config', 'systemd', 'user', 'cc-presence.service');
+
+function quiet(cmd, args) {
+  try {
+    require('child_process').execFileSync(cmd, args, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Автозапуск: без него пингер не переживает перезагрузку и тул тихо умирает.
+// process.execPath у Homebrew указывает в Cellar с версией: обновление
+// Node молча ломает автозапуск. Предпочитаем стабильный симлинк.
+function nodePath() {
+  for (const c of ['/opt/homebrew/bin/node', '/usr/local/bin/node', '/usr/bin/node']) {
+    try {
+      if (fs.realpathSync(c) === fs.realpathSync(process.execPath)) return c;
+    } catch {}
+  }
+  return process.execPath;
+}
+
+function serviceFile() {
+  const node = nodePath();
+  const pingd = path.join(BIN, 'pingd.js');
+  const server = process.env.PRESENCE_SERVER;
+  if (process.platform === 'darwin') {
+    const env = server
+      ? `  <key>EnvironmentVariables</key>\n  <dict><key>PRESENCE_SERVER</key><string>${server}</string></dict>\n`
+      : '';
+    return {
+      kind: 'launchd',
+      file: AGENT,
+      body: `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${LABEL}</string>
+  <key>ProgramArguments</key>
+  <array><string>${node}</string><string>${pingd}</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ProcessType</key><string>Background</string>
+${env}</dict>
+</plist>
+`,
+    };
+  }
+  if (process.platform === 'linux') {
+    return {
+      kind: 'systemd',
+      file: UNIT,
+      body: `[Unit]
+Description=cc-presence pinger
+
+[Service]
+ExecStart=${node} ${pingd}
+${server ? `Environment=PRESENCE_SERVER=${server}\n` : ''}Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+`,
+    };
+  }
+  return null;
+}
+
+function installService() {
+  const svc = serviceFile();
+  if (!svc) return null;
+  fs.mkdirSync(path.dirname(svc.file), { recursive: true });
+  fs.writeFileSync(svc.file, svc.body);
+  if (svc.kind === 'launchd') {
+    quiet('launchctl', ['unload', svc.file]);
+    return quiet('launchctl', ['load', '-w', svc.file]) ? svc.kind : null;
+  }
+  quiet('systemctl', ['--user', 'daemon-reload']);
+  return quiet('systemctl', ['--user', 'enable', '--now', 'cc-presence']) ? svc.kind : null;
+}
+
+function removeService() {
+  const svc = serviceFile();
+  if (!svc || !fs.existsSync(svc.file)) return false;
+  if (svc.kind === 'launchd') quiet('launchctl', ['unload', '-w', svc.file]);
+  else {
+    quiet('systemctl', ['--user', 'disable', '--now', 'cc-presence']);
+    quiet('systemctl', ['--user', 'daemon-reload']);
+  }
+  fs.rmSync(svc.file, { force: true });
+  return true;
+}
 
 // npx распаковывает пакет во временный кэш, поэтому рантайм копируем к себе.
 function copyRuntime() {
@@ -45,6 +140,11 @@ function running() {
 
 function start() {
   if (running()) return console.log('пингер уже работает');
+  const kind = installService();
+  if (kind) {
+    fs.rmSync(PID, { force: true });
+    return console.log(`пингер запущен и переживёт перезагрузку (${kind})`);
+  }
   const child = spawn(process.execPath, [path.join(BIN, 'pingd.js')], {
     detached: true, stdio: 'ignore', env: process.env,
   });
@@ -54,11 +154,14 @@ function start() {
 }
 
 function stop() {
+  const hadService = removeService();
   const pid = running();
-  if (!pid) return console.log('пингер не работает');
-  process.kill(pid);
-  fs.rmSync(PID, { force: true });
-  console.log('пингер остановлен');
+  if (pid) {
+    process.kill(pid);
+    fs.rmSync(PID, { force: true });
+  }
+  if (!hadService && !pid) return console.log('пингер не работает');
+  console.log(hadService ? 'пингер остановлен, автозапуск снят' : 'пингер остановлен');
 }
 
 function install() {
@@ -82,8 +185,18 @@ function install() {
 }
 
 function status() {
-  const pid = running();
+  const svc = serviceFile();
+  const auto = svc && fs.existsSync(svc.file);
+  let pid = running();
+  if (!pid) {
+    try {
+      pid = Number(require('child_process')
+        .execFileSync('pgrep', ['-f', path.join(BIN, 'pingd.js')], { encoding: 'utf8' })
+        .trim().split('\n')[0]);
+    } catch {}
+  }
   console.log(`пингер: ${pid ? `работает (pid ${pid})` : 'не работает'}`);
+  console.log(`автозапуск: ${auto ? `${svc.kind}, ${svc.file}` : 'нет'}`);
   console.log(`statusLine: ${readSettings().statusLine?.command || 'не настроен'}`);
   try {
     console.log(`строка: ${fs.readFileSync(path.join(DIR, 'cohort.json'), 'utf8')}`);
