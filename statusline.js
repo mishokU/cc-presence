@@ -52,10 +52,10 @@ function usedPct(input) {
 
 // Свой цвет у каждого блока: presence не должен путаться со служебной
 // частью строки. Зелёный у «в консоли» — привычный индикатор онлайна.
-const STREAK = '\x1b[1;95m';
-const NEAR = '\x1b[1;92m';
-const NIGHT = '\x1b[1;96m';
-const WARN = '\x1b[1;93m';
+const STREAK = '\x1b[95m';
+const NEAR = '\x1b[92m';
+const NIGHT = '\x1b[96m';
+const WARN = '\x1b[93m';
 const OFF = '\x1b[0m';
 
 function render(c, now, { color = false, locale = 'en' } = {}) {

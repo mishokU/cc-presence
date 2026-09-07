@@ -53,9 +53,9 @@ assert.equal(lang({}), 'en', 'без локали -> английский');
 assert.equal(lang({ PRESENCE_LANG: 'ru', LANG: 'en_US.UTF-8' }), 'ru', 'явная переменная сильнее');
 
 assert.equal(render({ streak: 70, near: 0, night: 0, limited: 6, ts: NOW }, NOW, { color: true, locale: 'ru' }),
-  '\x1b[1;95mдень 70\x1b[0m · \x1b[1;93m6 ждут сброса\x1b[0m', 'стрик пурпурный, лимит жёлтый');
+  '\x1b[95mдень 70\x1b[0m · \x1b[93m6 ждут сброса\x1b[0m', 'стрик пурпурный, лимит жёлтый');
 assert.equal(render({ streak: 70, near: 2, night: 1, limited: 0, ts: NOW }, NOW, { color: true, locale: 'ru' }),
-  '\x1b[1;95mдень 70\x1b[0m · \x1b[1;92m2 в консоли\x1b[0m · \x1b[1;96m1 не спит\x1b[0m', 'свой цвет у каждого блока');
+  '\x1b[95mдень 70\x1b[0m · \x1b[92m2 в консоли\x1b[0m · \x1b[96m1 не спит\x1b[0m', 'свой цвет у каждого блока');
 
 // --- стрик
 assert.equal(streakFrom(days(NOW, NOW - DAY, NOW - 2 * DAY), NOW), 3);
