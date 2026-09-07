@@ -9,6 +9,8 @@ const crypto = require('crypto');
 const HOME = os.homedir();
 const DIR = path.join(HOME, '.claude', 'presence');
 const PROJECTS = path.join(HOME, '.claude', 'projects');
+const STATS = path.join(HOME, '.claude', 'stats-cache.json');
+const HISTORY = path.join(HOME, '.claude', 'history.jsonl');
 const ID_FILE = path.join(DIR, 'id');
 const STATE = path.join(DIR, 'state.json');
 const COHORT = path.join(DIR, 'cohort.json');
@@ -19,10 +21,22 @@ const DAY_MS = 86_400_000;
 
 const dayKey = (t) => {
   const d = new Date(t);
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const p2 = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
 };
 
-function collectDays(root, now = Date.now()) {
+// Claude Code сам ведёт помесячную активность — это и есть источник стрика.
+function daysFromStats(file = STATS) {
+  const days = new Set();
+  const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  for (const a of raw.dailyActivity || []) {
+    if (a && a.messageCount > 0 && /^\d{4}-\d{2}-\d{2}$/.test(a.date)) days.add(a.date);
+  }
+  if (!days.size) throw new Error('empty dailyActivity');
+  return days;
+}
+
+function mtimeDays(root, now = Date.now()) {
   const days = new Set();
   let entries;
   try {
@@ -37,6 +51,20 @@ function collectDays(root, now = Date.now()) {
       if (m <= now) days.add(dayKey(m));
     } catch {}
   }
+  return days;
+}
+
+// Кэш пересчитывается не каждый день, поэтому сегодняшний день добираем по mtime history.
+function collectDays(now = Date.now()) {
+  let days;
+  try {
+    days = daysFromStats();
+  } catch {
+    days = mtimeDays(PROJECTS, now);
+  }
+  try {
+    if (dayKey(fs.statSync(HISTORY).mtimeMs) === dayKey(now)) days.add(dayKey(now));
+  } catch {}
   return days;
 }
 
@@ -78,7 +106,7 @@ function writeCohort(data) {
 }
 
 async function tick(id) {
-  const streak = streakFrom(collectDays(PROJECTS));
+  const streak = streakFrom(collectDays());
   const body = { id, streak, state: readState() };
   let near = 0;
   let limited = 0;
@@ -108,4 +136,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { streakFrom, dayKey, collectDays };
+module.exports = { streakFrom, dayKey, collectDays, daysFromStats, mtimeDays };

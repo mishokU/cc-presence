@@ -8,13 +8,14 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const { usedPct, render } = require('./statusline.js');
-const { streakFrom } = require('./pingd.js');
+const { streakFrom, daysFromStats } = require('./pingd.js');
 const { range, cohort, valid, server, live } = require('./server.js');
 const NOW = Date.parse('2026-09-07T12:00:00Z');
 const DAY = 86_400_000;
 const days = (...ts) => new Set(ts.map((t) => {
   const d = new Date(t);
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const p2 = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
 }));
 
 // --- rate_limits: все варианты имён + отсутствие
@@ -42,6 +43,19 @@ assert.equal(streakFrom(days(NOW, NOW - DAY, NOW - 2 * DAY), NOW), 3);
 assert.equal(streakFrom(days(NOW - DAY, NOW - 2 * DAY), NOW), 2, 'поблажка: сегодня пусто -> считаем от вчера');
 assert.equal(streakFrom(days(NOW - 2 * DAY), NOW), 0, 'разрыв в два дня -> стрик сгорел');
 assert.equal(streakFrom(new Set(), NOW), 0);
+
+// --- дни из stats-cache
+const statsFile = path.join(os.tmpdir(), `presence-stats-${process.pid}.json`);
+fs.writeFileSync(statsFile, JSON.stringify({ dailyActivity: [
+  { date: '2026-09-06', messageCount: 10 },
+  { date: '2026-09-05', messageCount: 3 },
+  { date: '2026-09-04', messageCount: 0 },
+  { date: 'мусор', messageCount: 5 },
+] }));
+assert.deepEqual([...daysFromStats(statsFile)].sort(), ['2026-09-05', '2026-09-06'], 'пустые дни и мусор отбрасываются');
+assert.equal(streakFrom(daysFromStats(statsFile), Date.parse('2026-09-07T12:00:00Z')), 2, 'поблажка на сегодня');
+assert.throws(() => daysFromStats(path.join(os.tmpdir(), 'нет-такого.json')), 'нет кэша -> fallback на mtime');
+fs.rmSync(statsFile);
 
 // --- когорта
 assert.deepEqual(range(70), { lo: 52, hi: 88 });
