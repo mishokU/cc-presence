@@ -86,8 +86,13 @@ work in that process.
 
 ## Cohort
 
-A ±25% band around your streak, never narrower than ±3 days. At a streak of 70
-that is 52–88; at 5 it is 2–8. You never count yourself.
+Two people are in the same cohort when their streaks differ by no more than 25%
+of the larger one, and never less than 3 days — a symmetric test, so seeing each
+other is always mutual. You never count yourself.
+
+Below 20 people online the cohort is not applied at all: splitting a small crowd
+into bands leaves everyone with a zero, which is the one thing this tool exists
+to prevent.
 
 ## License
 

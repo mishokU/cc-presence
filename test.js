@@ -9,7 +9,7 @@ const { execFileSync } = require('child_process');
 
 const { usedPct, render, lang } = require('./statusline.js');
 const { streakFrom, daysFromStats } = require('./pingd.js');
-const { range, cohort, valid, server, live } = require('./server.js');
+const { isNear, cohort, valid, server, live } = require('./server.js');
 const NOW = Date.parse('2026-09-07T12:00:00Z');
 const DAY = 86_400_000;
 const days = (...ts) => new Set(ts.map((t) => {
@@ -74,9 +74,12 @@ assert.equal(streakFrom(daysFromStats(statsFile), Date.parse('2026-09-07T12:00:0
 assert.throws(() => daysFromStats(path.join(os.tmpdir(), 'нет-такого.json')), 'нет кэша -> fallback на mtime');
 fs.rmSync(statsFile);
 
-// --- когорта
-assert.deepEqual(range(70), { lo: 52, hi: 88 });
-assert.deepEqual(range(5), { lo: 2, hi: 8 });
+// --- когорта: симметрия
+assert.ok(isNear(70, 60) && isNear(60, 70), 'близкие видят друг друга с обеих сторон');
+assert.ok(isNear(36, 27) && isNear(27, 36), 'раньше 27 не видел 36 — теперь симметрично');
+assert.ok(isNear(5, 2) && isNear(2, 5), 'на малых стриках работает окно ±3');
+assert.ok(!isNear(70, 5) && !isNear(5, 70), 'далёкие не видят друг друга в обе стороны');
+assert.ok(isNear(0, 3) && !isNear(0, 4), 'граница окна ±3');
 const peers = new Map([
   ['a', { streak: 60, state: 'limit', night: true, exp: NOW + 1 }],
   ['b', { streak: 88, state: 'work', night: true, exp: NOW + 1 }],
@@ -84,8 +87,16 @@ const peers = new Map([
   ['d', { streak: 70, state: 'limit', night: true, exp: NOW - 1 }],
   ['me', { streak: 70, state: 'work', night: false, exp: NOW + 1 }],
 ]);
-assert.deepEqual(cohort('me', 70, NOW, peers), { near: 2, night: 2, limited: 1 }, '70 не видит 5, себя и протухших');
-assert.deepEqual(cohort('c', 5, NOW, peers), { near: 0, night: 0, limited: 0 }, '5 не видит 70');
+// живых мало (< 20) — когорта не делится, видно всех
+assert.deepEqual(cohort('me', 70, NOW, peers), { near: 3, night: 2, limited: 2 }, 'мало онлайн -> видно всех живых');
+
+// а когда живых много, полоса включается
+const many = new Map(peers);
+for (let i = 0; i < 20; i++) {
+  many.set(`e${i}`.padEnd(32, '0'), { streak: 200, state: 'work', night: false, exp: NOW + 1 });
+}
+assert.deepEqual(cohort('me', 70, NOW, many), { near: 2, night: 2, limited: 1 }, 'много онлайн -> только когорта');
+assert.deepEqual(cohort('c', 5, NOW, many), { near: 0, night: 0, limited: 0 }, '5 не видит 70 и 200');
 
 // --- валидация тела
 assert.ok(valid({ id: 'a'.repeat(32), streak: 70, state: 'work' }));

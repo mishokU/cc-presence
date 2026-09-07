@@ -9,22 +9,28 @@ const MAX_BODY = 1024;
 
 const live = new Map();
 
-// Полоса ±25%, но не уже ±3 дней.
-function range(streak) {
-  return {
-    lo: Math.min(streak - 3, Math.floor(streak * 0.75)),
-    hi: Math.max(streak + 3, Math.ceil(streak * 1.25)),
-  };
+// Ниже этого числа онлайн когорта не делится: делить нечего.
+const COHORT_MIN_ALIVE = 20;
+
+// Симметрично: ±25% от большего стрика, но не уже ±3 дней.
+// Полоса от собственного стрика делала отношение односторонним —
+// 36 видел 27, а 27 не видел 36.
+function isNear(a, b) {
+  return Math.abs(a - b) <= Math.max(3, 0.25 * Math.max(a, b));
 }
 
 function cohort(id, streak, now, peers = live) {
-  const { lo, hi } = range(streak);
+  const alive = [];
+  for (const [pid, p] of peers) {
+    if (pid === id || p.exp <= now) continue;
+    alive.push(p);
+  }
+  const split = alive.length >= COHORT_MIN_ALIVE;
   let near = 0;
   let night = 0;
   let limited = 0;
-  for (const [pid, p] of peers) {
-    if (pid === id || p.exp <= now) continue;
-    if (p.streak < lo || p.streak > hi) continue;
+  for (const p of alive) {
+    if (split && !isNear(streak, p.streak)) continue;
     near++;
     if (p.night) night++;
     if (p.state === 'limit') limited++;
@@ -68,4 +74,4 @@ const server = http.createServer((req, res) => {
 });
 
 if (require.main === module) server.listen(PORT, () => console.log(`presence on :${PORT}`));
-module.exports = { range, cohort, valid, server, live };
+module.exports = { isNear, cohort, valid, server, live, COHORT_MIN_ALIVE };
