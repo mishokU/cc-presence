@@ -12,8 +12,18 @@ const TTL_MS = 5 * 60 * 1000;
 const LIMIT_PCT = 95;
 
 const WORDS = {
-  ru: { day: 'день', near: 'рядом', night: 'в ночи', limit: 'на лимите' },
-  en: { day: 'day', near: 'nearby', night: 'up late', limit: 'capped' },
+  ru: {
+    day: (n) => `день ${n}`,
+    near: (n) => `${n} в консоли`,
+    night: (n) => `${n} не спят`,
+    limit: (n) => `${n} ждут сброса`,
+  },
+  en: {
+    day: (n) => `day ${n}`,
+    near: (n) => `${n} online`,
+    night: (n) => `${n} still up`,
+    limit: (n) => `${n} waiting it out`,
+  },
 };
 
 // Русский только явно: аудитория тула международная.
@@ -46,12 +56,12 @@ function render(c, now, { color = false, locale = 'en' } = {}) {
   if (!c || typeof c.streak !== 'number' || !Number.isFinite(c.streak)) return '';
   const w = WORDS[locale] || WORDS.en;
   const paint = (text, code) => (color ? code + text + OFF : text);
-  const parts = [paint(`${w.day} ${c.streak}`, DIM)];
+  const parts = [paint(w.day(c.streak), DIM)];
   const fresh = typeof c.ts === 'number' && now - c.ts < TTL_MS;
   if (fresh) {
-    if (c.near > 0) parts.push(paint(`${w.near} ${c.near}`, DIM));
-    if (c.night > 0) parts.push(paint(`${w.night} ${c.night}`, NIGHT));
-    if (c.limited > 0) parts.push(paint(`${w.limit} ${c.limited}`, WARN));
+    if (c.near > 0) parts.push(paint(w.near(c.near), DIM));
+    if (c.night > 0) parts.push(paint(w.night(c.night), NIGHT));
+    if (c.limited > 0) parts.push(paint(w.limit(c.limited), WARN));
   }
   return parts.join(' · ');
 }

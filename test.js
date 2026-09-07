@@ -30,13 +30,13 @@ assert.equal(usedPct(null), null);
 // --- рендер
 const ru = { locale: 'ru' };
 assert.equal(render({ streak: 70, near: 0, night: 0, limited: 0, ts: NOW }, NOW, ru), 'день 70', 'нули -> блоков нет');
-assert.equal(render({ streak: 70, near: 9, night: 0, limited: 0, ts: NOW }, NOW, ru), 'день 70 · рядом 9');
+assert.equal(render({ streak: 70, near: 9, night: 0, limited: 0, ts: NOW }, NOW, ru), 'день 70 · 9 в консоли');
 assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW }, NOW, ru),
-  'день 70 · рядом 9 · в ночи 4 · на лимите 6');
+  'день 70 · 9 в консоли · 4 не спят · 6 ждут сброса');
 assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW }, NOW),
-  'day 70 · nearby 9 · up late 4 · capped 6', 'английский по умолчанию');
+  'day 70 · 9 online · 4 still up · 6 waiting it out', 'английский по умолчанию');
 assert.equal(render({ streak: 70, near: 9, night: 0, limited: 6, ts: NOW }, NOW, ru),
-  'день 70 · рядом 9 · на лимите 6', 'нулевая ночь выпадает из середины');
+  'день 70 · 9 в консоли · 6 ждут сброса', 'нулевая ночь выпадает из середины');
 assert.equal(render({ streak: 70, near: 9, night: 4, limited: 6, ts: NOW - 6 * 60_000 }, NOW, ru), 'день 70', 'протух -> только стрик');
 assert.equal(render(null, NOW), '', 'нет cohort.json -> пусто');
 assert.equal(render({ near: 9 }, NOW), '');
@@ -47,7 +47,7 @@ assert.equal(lang({}), 'en', 'без локали -> английский');
 assert.equal(lang({ PRESENCE_LANG: 'ru', LANG: 'en_US.UTF-8' }), 'ru', 'явная переменная сильнее');
 
 assert.equal(render({ streak: 70, near: 0, night: 0, limited: 6, ts: NOW }, NOW, { color: true, locale: 'ru' }),
-  '\x1b[2mдень 70\x1b[0m · \x1b[33mна лимите 6\x1b[0m', 'цвет только в main');
+  '\x1b[2mдень 70\x1b[0m · \x1b[33m6 ждут сброса\x1b[0m', 'цвет только в main');
 
 // --- стрик
 assert.equal(streakFrom(days(NOW, NOW - DAY, NOW - 2 * DAY), NOW), 3);
