@@ -16,7 +16,7 @@ function usedPct(input) {
   const rl = input && input.rate_limits;
   const w = rl && (rl.five_hour || rl.fiveHour);
   if (!w || typeof w !== 'object') return null;
-  for (const k of ['used_pct', 'usedPct', 'utilization', 'used_percent']) {
+  for (const k of ['used_percentage', 'used_pct', 'usedPct', 'utilization', 'used_percent']) {
     const v = w[k];
     if (typeof v === 'number' && Number.isFinite(v)) return v <= 1 ? v * 100 : v;
   }
@@ -26,13 +26,18 @@ function usedPct(input) {
   return null;
 }
 
-function render(c, now) {
+const DIM = '\x1b[2m';
+const WARN = '\x1b[33m';
+const OFF = '\x1b[0m';
+
+function render(c, now, color = false) {
   if (!c || typeof c.streak !== 'number' || !Number.isFinite(c.streak)) return '';
-  let s = `день ${c.streak}`;
+  const paint = (text, code) => (color ? code + text + OFF : text);
+  let s = paint(`день ${c.streak}`, DIM);
   const fresh = typeof c.ts === 'number' && now - c.ts < TTL_MS;
   if (fresh) {
-    if (c.limited > 0) s += ` · ${c.limited} из твоих на лимите`;
-    else if (c.near > 0) s += ` · рядом ${c.near}`;
+    if (c.limited > 0) s += paint(` · ${c.limited} из твоих на лимите`, WARN);
+    else if (c.near > 0) s += paint(` · рядом ${c.near}`, DIM);
   }
   return s;
 }
@@ -48,7 +53,7 @@ function main() {
     }));
   } catch {}
   try {
-    const line = render(JSON.parse(fs.readFileSync(COHORT, 'utf8')), Date.now());
+    const line = render(JSON.parse(fs.readFileSync(COHORT, 'utf8')), Date.now(), true);
     if (line) process.stdout.write(line);
   } catch {}
 }

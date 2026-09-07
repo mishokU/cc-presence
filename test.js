@@ -18,6 +18,7 @@ const days = (...ts) => new Set(ts.map((t) => {
 }));
 
 // --- rate_limits: все варианты имён + отсутствие
+assert.equal(usedPct({ rate_limits: { five_hour: { used_percentage: 96 } } }), 96, 'реальное поле Claude Code');
 assert.equal(usedPct({ rate_limits: { five_hour: { used_pct: 96 } } }), 96);
 assert.equal(usedPct({ rate_limits: { fiveHour: { usedPct: 96 } } }), 96);
 assert.equal(usedPct({ rate_limits: { five_hour: { utilization: 0.96 } } }), 96);
@@ -32,6 +33,9 @@ assert.equal(render({ streak: 70, near: 9, limited: 6, ts: NOW }, NOW), 'ден�
 assert.equal(render({ streak: 70, near: 9, limited: 6, ts: NOW - 6 * 60_000 }, NOW), 'день 70', 'протух -> только стрик');
 assert.equal(render(null, NOW), '', 'нет cohort.json -> пусто');
 assert.equal(render({ near: 9 }, NOW), '');
+
+assert.equal(render({ streak: 70, near: 9, limited: 6, ts: NOW }, NOW, true),
+  '\x1b[2mдень 70\x1b[0m\x1b[33m · 6 из твоих на лимите\x1b[0m', 'цвет только в main');
 
 // --- стрик
 assert.equal(streakFrom(days(NOW, NOW - DAY, NOW - 2 * DAY), NOW), 3);
@@ -69,9 +73,9 @@ assert.equal(run('{}'), '', 'нет cohort.json -> пусто, exit 0');
 const pdir = path.join(home, '.claude', 'presence');
 fs.mkdirSync(pdir, { recursive: true });
 fs.writeFileSync(path.join(pdir, 'cohort.json'), JSON.stringify({ streak: 70, near: 0, limited: 0, ts: Date.now() }));
-assert.equal(run('{"rate_limits":{"five_hour":{"used_pct":99}}}'), 'день 70');
+assert.match(run('{"rate_limits":{"five_hour":{"used_percentage":99}}}'), /день 70/);
 assert.equal(JSON.parse(fs.readFileSync(path.join(pdir, 'state.json'), 'utf8')).state, 'limit');
-assert.equal(run('{"rate_limits":{"five_hour":{"used_pct":10}}}'), 'день 70');
+assert.match(run('{"rate_limits":{"five_hour":{"used_percentage":10}}}'), /день 70/);
 assert.equal(JSON.parse(fs.readFileSync(path.join(pdir, 'state.json'), 'utf8')).state, 'work');
 
 const t = [];
