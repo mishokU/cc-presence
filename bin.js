@@ -12,7 +12,14 @@ const BIN = path.join(DIR, 'bin');
 const PID = path.join(DIR, 'pingd.pid');
 const SETTINGS = path.join(HOME, '.claude', 'settings.json');
 const RUNTIME = ['statusline.js', 'pingd.js', 'dump.js'];
-const CMD = `node ${path.join(BIN, 'statusline.js')}`;
+// Прямые слеши даже на Windows: node их понимает, а bash-подобная оболочка
+// не съедает как escape-последовательности. Кавычки — на случай пробелов в пути.
+const posix = (p) => p.split(path.sep).join('/');
+const CMD = `node "${posix(path.join(BIN, 'statusline.js'))}"`;
+
+// Наша команда в любом её историческом виде — чтобы обновление не приняло
+// собственный statusLine за чужой и не отказалось его чинить.
+const isOurs = (cmd) => typeof cmd === 'string' && /presence[\\/]+bin[\\/]+statusline\.js/.test(cmd);
 const LABEL = 'com.cc-presence.pingd';
 const AGENT = path.join(HOME, 'Library', 'LaunchAgents', `${LABEL}.plist`);
 const UNIT = path.join(HOME, '.config', 'systemd', 'user', 'cc-presence.service');
@@ -184,7 +191,8 @@ function stop() {
 function install() {
   copyRuntime();
   const s = readSettings();
-  const busy = s.statusLine && s.statusLine.command && s.statusLine.command !== CMD;
+  const cur = s.statusLine && s.statusLine.command;
+  const busy = cur && cur !== CMD && !isOurs(cur);
   if (busy) {
     console.log('\nstatusLine уже занят — свой не трогаю. Допиши в конец своего скрипта:\n');
     console.log(`  presence=$(printf '%s' "$input" | ${CMD} 2>/dev/null)`);
@@ -225,7 +233,7 @@ function status() {
 function uninstall() {
   stop();
   const s = readSettings();
-  if (s.statusLine && s.statusLine.command === CMD) {
+  if (s.statusLine && (s.statusLine.command === CMD || isOurs(s.statusLine.command))) {
     delete s.statusLine;
     writeSettings(s);
     console.log('statusLine убран');
